@@ -16,7 +16,7 @@ git clone https://github.com/yogik23/skw-taiko.git && cd skw-taiko
 ```
 npm install
 ```
-3. Buat file `.env` copy file `.env.contoh` submit privatekey
+3. Buat file `.env` copy file `.env.contoh` submit privatekey, API bot, UserID telegram
 ```
 nano .env
 ```
