@@ -4,7 +4,6 @@ const swap_ABI = require('./weth_abi');
 const chalk = require('chalk');
 const figlet = require('figlet');
 const cron = require('node-cron');
-const readline = require('readline');
 const displayskw = require('./welcomeskw');
 const TelegramBot = require('node-telegram-bot-api');
 
@@ -34,40 +33,6 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-function autobot() {
-    console.clear();
-    rl.question(chalk.hex(`#add8e6`)('Apa yang ingin Anda lakukan?\n1. Swap menggunakan cron otomatis tiap hari\n2. Swap tanpa cron, berhenti ketika selesai\n3. Langsung swap tanpa 2x tx\n4. ETH Gratis dari Prabowo\nPilih (1/2/3/4): '), (answer) => {
-        switch(answer) {
-            case '1':
-                main();
-                break;
-            case '2':
-                startautobot();
-                break;
-            case '3':
-                startBotSKW();
-                break;
-            case '4':
-                console.log(chalk.red(`FUCK MAKAN GRATIS`));
-                console.log(chalk.red(`FUCK MAKAN GRATIS`));
-                console.log(chalk.yellow(`FUCK MAKAN GRATIS`));
-                console.log(chalk.yellow(`FUCK MAKAN GRATIS`));
-                console.log(chalk.green(`FUCK MAKAN GRATIS`));
-                console.log(chalk.green(`FUCK MAKAN GRATIS`));    
-                process.exit();
-            default:
-                console.log('Pilihan tidak valid. Silakan pilih 1, 2, atau 3.');
-                autobot();
-        }
-        rl.close();
-    });
-}
-
 function getRandomAmount() {
   const min = parseFloat(process.env.RANDOM_AMOUNT_MIN);
   const max = parseFloat(process.env.RANDOM_AMOUNT_MAX);
@@ -81,19 +46,20 @@ async function getLatestData(address) {
         const response = await axios.get(url, {
             headers: {
                 'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json, text/plain, */*'
             }
         });
 
-        if (response.data && response.data.items && response.data.items.length > 0) {
-            const points = response.data.items.slice(0, 2).map(item => item.points);
-            return points; 
+        if (response.data && response.data.items) {
+            const items = response.data.items.slice(0, 20);
+            return items.map(item => item.points);
         } else {
-            console.log('Tidak ada items ditemukan.');
-            return [null, null, null]; 
+            console.error('Tidak ada items dalam respons:', response.data);
+            return [];
         }
     } catch (error) {
-        console.error('Error saat mengambil data:', error);
-        return [null, null, null]; 
+        console.error('Error saat mengambil data:', error.response ? error.response.data : error.message);
+        return [];
     }
 }
 
@@ -256,14 +222,14 @@ async function startBot() {
         await deposit(1);
         totalDepositCount++;
         console.log(chalk.hex('#ffb347')(`⏳ Delay 5 Detik`));
-        await startCountdown(4);
+        await startCountdown(5);
         console.log();
 
         await withdraw(1);
         totalWithdrawCount++;
         console.log(chalk.hex('#90ee90')('✅ 2x Swap untuk mendapatkan point baru Selesai!'));
         console.log(chalk.hex('#ffffe0')('⏳ Delay 1 jam agar point diweb sudah dipastikan update!'));
-        await startCountdown(3600);
+        await startCountdown(5);
         console.log();
         console.log();
 
@@ -271,18 +237,27 @@ async function startBot() {
             const depositCount = 1;
             const withdrawCount = 1;
 
+            console.log(chalk.hex('#dda0dd')(`📊 Mengecek Point Sebelum Transaksi...`));
+            const newpoints = await getLatestData(address);
+            console.log(chalk.hex('#FF6347')(`🎰 Point yg didapat : ${newpoints.join(', ')}`));
+
+            if (newpoints.some(point => point === 0)) {
+                console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
+                shouldContinue = false;
+                break;
+            }
+
             await deposit(0, depositCount);
             totalDepositCount++;
-
-            const pointsAfterDeposit = await getLatestData(address);
-            const formatPointsdepo = pointsAfterDeposit.join(', ');
-            console.log(chalk.hex('#dda0dd')('📊 Poin tx Terakhir:', formatPointsdepo));
-
-            console.log(chalk.hex('#ffb347')('⏳ Delay 2 Menit Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(120);
+            console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
+            await startCountdown(300);
             console.log();
 
-            if (pointsAfterDeposit.some(point => point === 0)) {
+            console.log(chalk.hex('#dda0dd')(`📊 Mengecek Point Sebelum Transaksi...`));
+            const pointsAfterWithdraw = await getLatestData(address);
+            console.log(chalk.hex('#FF6347')(`🎰 Point yg didapat : ${pointsAfterWithdraw.join(', ')}`));
+
+            if (pointsAfterWithdraw.some(point => point === 0)) {
                 console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
                 shouldContinue = false;
                 break;
@@ -291,19 +266,9 @@ async function startBot() {
             await withdraw(0, withdrawCount);
             totalWithdrawCount++;
 
-            const pointsAfterWithdraw = await getLatestData(address);
-            const formatPointswd = pointsAfterWithdraw.join(', ');
-            console.log(chalk.hex('#dda0dd')('📊 Poin Terakhir:', formatPointswd));
-
-            console.log(chalk.hex('#ffb347')('⏳ Delay 2 Menit Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(120);
+            console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
+            await startCountdown(300);
             console.log();
-
-            if (pointsAfterWithdraw.some(point => point === 0)) {
-                console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
-                shouldContinue = false;
-                break;
-            }
         }
 
         await akhirnya();
@@ -311,68 +276,6 @@ async function startBot() {
         console.error('Error dalam startBot:', error);
     }
 }
-
-async function startBotSKW() {
-    console.clear();
-    displayskw();
-    console.log();
-    await delay(3000);
-
-    try {
-        const address = account.address;
-        let shouldContinue = true;
-
-        while (shouldContinue) {
-            const depositCount = 1;
-            const withdrawCount = 1;
-
-            await deposit(0, depositCount);
-            totalDepositCount++;
-
-            const pointsAfterDeposit = await getLatestData(address);
-            const formatPointsdepo = pointsAfterDeposit.join(', ');
-            console.log(chalk.hex('#dda0dd')('📊 Poin tx Terakhir:', formatPointsdepo));
-
-            console.log(chalk.hex('#ffb347')('⏳ Delay 2 Menit Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(120);
-            console.log();
-
-            if (pointsAfterDeposit.some(point => point === 0)) {
-                console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
-                shouldContinue = false;
-                break;
-            }
-
-            await withdraw(0, withdrawCount);
-            totalWithdrawCount++;
-
-            const pointsAfterWithdraw = await getLatestData(address);
-            const formatPointswd = pointsAfterWithdraw.join(', ');
-            console.log(chalk.hex('#dda0dd')('📊 Poin Terakhir:', formatPointswd));
-
-            console.log(chalk.hex('#ffb347')('⏳ Delay 2 Menit Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(120);
-            console.log();
-
-            if (pointsAfterWithdraw.some(point => point === 0)) {
-                console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
-                shouldContinue = false;
-                break;
-            }
-        }
-
-        await akhirnya();
-        process.exit()
-    } catch (error) {
-        console.error('Error dalam startBot:', error);
-    }
-}
-
-async function startautobot() {
-    await startBot();
-    process.exit();
-}
-
 
 async function startCountdown(seconds) {
     return new Promise((resolve) => {
@@ -397,7 +300,7 @@ async function main() {
         await startBot();
         console.log();
         console.log(chalk.magenta.bold(`Cron AKTIF`));
-        console.log(chalk.magenta('Jam 07:01 WIB Autobot Akan Run Ulang...'));
+        console.log(chalk.magenta('Menunggu Jam 00.01 UTC Untuk Swap Lagi...'));
     });
 
     await startBot();
@@ -406,4 +309,4 @@ async function main() {
     console.log(chalk.magenta('Jam 07:01 WIB Autobot Akan Run Ulang...'));
 }
 
-autobot();
+main();
