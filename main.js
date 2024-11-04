@@ -229,7 +229,7 @@ async function startBot() {
         totalWithdrawCount++;
         console.log(chalk.hex('#90ee90')('✅ 2x Swap untuk mendapatkan point baru Selesai!'));
         console.log(chalk.hex('#ffffe0')('⏳ Delay 1 jam agar point diweb sudah dipastikan update!'));
-        await startCountdown(5);
+        await startCountdown(3600);
         console.log();
         console.log();
 
@@ -250,7 +250,7 @@ async function startBot() {
             await deposit(0, depositCount);
             totalDepositCount++;
             console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(300);
+            await startCountdown(600);
             console.log();
 
             console.log(chalk.hex('#dda0dd')(`📊 Mengecek Point Sebelum Transaksi...`));
@@ -267,7 +267,7 @@ async function startBot() {
             totalWithdrawCount++;
 
             console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(300);
+            await startCountdown(600);
             console.log();
         }
 
