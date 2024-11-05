@@ -214,13 +214,13 @@ async function dailytx() {
 
         await deposit(1);
         totalDepositCount++;
-        console.log(chalk.hex('#ffb347')(`⏳ Delay 5 Detik`));
+        console.log(chalk.hex('#ffb347')(`║ ⏳ Delay 5 Detik`));
         await startCountdown(5);
         console.log();
 
         await withdraw(1);
         totalWithdrawCount++;
-        console.log(chalk.hex('#ffb347')(`⏳ Delay 5 Detik`));
+        console.log(chalk.hex('#ffb347')(`║ ⏳ Delay 5 Detik`));
         await startCountdown(5);
         console.log();
 
