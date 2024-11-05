@@ -88,12 +88,12 @@ async function deposit(sendIndex, txCount) {
     totalAmountDeposited += parseFloat(amountSent);
 
     try {
-        console.log(chalk.hex('#90ee90')(`\n🔄 Melakukan Swap ${amountSent} ETH ke WETH...`));
+        console.log(chalk.hex('#1E90FF')(`\n║ 🔄 Melakukan Swap ${amountSent} ETH ke WETH...`));
         const transactionReceipt = await web3.eth.sendTransaction(transactionObject);
         
-        console.log(chalk.hex('#90ee90')(`✅ Transaksi berhasil!`));
+        console.log(chalk.hex('#90ee90')(`║ ✅ Transaksi berhasil!`));
         const transactionLink = `https://taikoscan.io/tx/${transactionReceipt.transactionHash}`;
-        console.log(chalk.hex('#add8e6')(`🔗 Rincian transaksi: ${transactionLink}`));
+        console.log(chalk.hex('#add8e6')(`║ 🔗 Rincian transaksi: ${transactionLink}`));
 
         const points = await getLatestData(account.address);
         const formatPoints = points.join(', '); 
@@ -149,12 +149,12 @@ async function withdraw(sendIndex, txCount) {
     totalAmountWithdrew += parseFloat(amountSent);
 
     try {
-        console.log(chalk.hex('#90ee90')(`\n🔄 Melakukan Swap ${amountSent} WETH ke ETH...`));
+        console.log(chalk.hex('#1E90FF')(`\n║ 🔄 Melakukan Swap ${amountSent} WETH ke ETH...`));
         const transactionReceipt = await web3.eth.sendTransaction(transactionObject);
 
-        console.log(chalk.hex('#90ee90')(`✅ Transaksi berhasil!`));
+        console.log(chalk.hex('#90ee90')(`║ ✅ Transaksi berhasil!`));
         const transactionLink = `https://taikoscan.io/tx/${transactionReceipt.transactionHash}`;
-        console.log(chalk.hex('#add8e6')(`🔗 Rincian transaksi: ${transactionLink}`));
+        console.log(chalk.hex('#add8e6')(`║ 🔗 Rincian transaksi: ${transactionLink}`));
 
         const points = await getLatestData(account.address);
         const formatPoints = points.join(', ');
@@ -208,17 +208,10 @@ async function akhirnya() {
     }
 }
 
-async function startBot() {
-    console.clear();
-    displayskw();
-    console.log();
-    await delay(3000);
-
+async function dailytx() {
     try {
         const address = account.address;
-        let shouldContinue = true;
 
-        console.log();
         await deposit(1);
         totalDepositCount++;
         console.log(chalk.hex('#ffb347')(`⏳ Delay 5 Detik`));
@@ -227,19 +220,45 @@ async function startBot() {
 
         await withdraw(1);
         totalWithdrawCount++;
-        console.log(chalk.hex('#90ee90')('✅ 2x Swap untuk mendapatkan point baru Selesai!'));
-        console.log(chalk.hex('#ffffe0')('⏳ Delay 1 jam agar point diweb sudah dipastikan update!'));
-        await startCountdown(3600);
+        console.log(chalk.hex('#ffb347')(`⏳ Delay 5 Detik`));
+        await startCountdown(5);
         console.log();
-        console.log();
+
+    } catch (error) {
+        console.error("Terjadi kesalahan:", error);
+    }
+}
+
+async function rundailybot() {
+    for (let count = 0; count < 40; count++) {
+        console.clear();
+        displayskw();
+        console.log(chalk.hex(`#8A2BE2`)(`\n\n✨ Swap Bolak-Balik ke-${count + 1} dari 40...\n`));
+        await dailytx();
+    }
+}
+
+async function startBot() {
+    await rundailybot();
+    console.log(chalk.hex('#ffffe0')('⏳ Delay 1 jam agar point diweb sudah dipastikan update!'));
+    await startCountdown(3600);
+    console.clear();
+    displayskw();
+    console.log();
+
+    try {
+        const address = account.address;
+        let shouldContinue = true;
 
         while (shouldContinue) {
             const depositCount = 1;
             const withdrawCount = 1;
 
-            console.log(chalk.hex('#dda0dd')(`📊 Mengecek Point Sebelum Transaksi...`));
+            console.log();
+            console.log(chalk.hex('#8A2BE2')("╔═════════════════════════════════════════════════════════════════════════════════════════════════════════"));
+            console.log(chalk.hex('#dda0dd')(`║ 📊 Mengecek Point Sebelum Transaksi...`));
             const newpoints = await getLatestData(address);
-            console.log(chalk.hex('#FF6347')(`🎰 Point yg didapat : ${newpoints.join(', ')}`));
+            console.log(chalk.hex('#FF6347')(`║ 🎰 Point yg didapat : ${newpoints.join(', ')}`));
 
             if (newpoints.some(point => point === 0)) {
                 console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
@@ -249,13 +268,16 @@ async function startBot() {
 
             await deposit(0, depositCount);
             totalDepositCount++;
-            console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(600);
+            console.log(chalk.hex('#ffb347')('║ ⏳ Delay Sebelum Melakukan Swap Lagi.....'));
+            await startCountdown(1800);
             console.log();
+            console.log(chalk.hex('#8A2BE2')("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════"));
 
-            console.log(chalk.hex('#dda0dd')(`📊 Mengecek Point Sebelum Transaksi...`));
+            console.log();
+            console.log(chalk.hex('#8A2BE2')("╔═════════════════════════════════════════════════════════════════════════════════════════════════════════"));
+            console.log(chalk.hex('#dda0dd')(`║ 📊 Mengecek Point Sebelum Transaksi...`));
             const pointsAfterWithdraw = await getLatestData(address);
-            console.log(chalk.hex('#FF6347')(`🎰 Point yg didapat : ${pointsAfterWithdraw.join(', ')}`));
+            console.log(chalk.hex('#FF6347')(`║ 🎰 Point yg didapat : ${pointsAfterWithdraw.join(', ')}`));
 
             if (pointsAfterWithdraw.some(point => point === 0)) {
                 console.log(chalk.hex('#ff6666')('🚫 Daily Max Reached\n'));
@@ -266,9 +288,10 @@ async function startBot() {
             await withdraw(0, withdrawCount);
             totalWithdrawCount++;
 
-            console.log(chalk.hex('#ffb347')('⏳ Delay Sebelum Melakukan Swap Lagi.....'));
-            await startCountdown(600);
+            console.log(chalk.hex('#ffb347')('║ ⏳ Delay Sebelum Melakukan Swap Lagi.....'));
+            await startCountdown(1800);
             console.log();
+            console.log(chalk.hex('#8A2BE2')("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════"));
         }
 
         await akhirnya();
@@ -288,7 +311,7 @@ async function startCountdown(seconds) {
             } else {
                 process.stdout.clearLine();
                 process.stdout.cursorTo(0);
-                process.stdout.write(chalk.hex('#ffb347')(`⏱️ Waktu Yg Tersisa: ${countdown} detik`));
+                process.stdout.write(chalk.hex('#FF69B4')(`║ ⏱️ Waktu Yg Tersisa: ${countdown} detik\r`));
                 countdown--;
             }
         }, 1000);
