@@ -230,10 +230,10 @@ async function dailytx() {
 }
 
 async function rundailybot() {
-    for (let count = 0; count < 40; count++) {
+    for (let count = 0; count < 36; count++) {
         console.clear();
         displayskw();
-        console.log(chalk.hex(`#8A2BE2`)(`\n\n✨ Swap Bolak-Balik ke-${count + 1} dari 40...\n`));
+        console.log(chalk.hex(`#8A2BE2`)(`\n\n✨ Swap Bolak-Balik ke-${count + 1} dari 36...\n`));
         await dailytx();
     }
 }
