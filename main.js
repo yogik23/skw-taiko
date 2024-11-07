@@ -63,19 +63,30 @@ async function getLatestData(address) {
     }
 }
 
+async function getETHPrice() {
+    try {
+        const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        return response.data.ethereum.usd;
+    } catch (error) {
+        console.error('Error mendapatkan harga ETH:', error);
+        return null;
+    }
+}
+
 async function deposit(sendIndex, txCount) {
     if (sendIndex >= txCount) return;
 
+    const ethPrice = await getETHPrice();
     const gasLimit = parseInt(process.env.GAS_LIMIT);
     const randomAmount = getRandomAmount();
-    const amountToDeposit = web3.utils.toWei(randomAmount, 'ether');
-    const valueToDeposit = parseFloat(amountToDeposit);
+    const amountToDeposit = web3.utils.toWei(randomAmount, 'ether'); 
+    const amountSent = web3.utils.fromWei(amountToDeposit, 'ether');
     const depETH = wethContract.methods.deposit().encodeABI();
 
     const transactionObject = {
         from: account.address,
         to: wethCA,
-        value: valueToDeposit,
+        value: amountToDeposit,
         maxPriorityFeePerGas: web3.utils.toHex(web3.utils.toWei(process.env.MAX_PRIORITY_FEE_PER_GAS, "gwei")),
         maxFeePerGas: web3.utils.toHex(web3.utils.toWei(process.env.MAX_FEE_PER_GAS, "gwei")),
         type: 2,
@@ -84,16 +95,22 @@ async function deposit(sendIndex, txCount) {
         gasLimit: web3.utils.toHex(gasLimit)
     };
 
-    const amountSent = web3.utils.fromWei(amountToDeposit, 'ether');
+    const amountUSD = (amountSent * ethPrice).toFixed(3);
     totalAmountDeposited += parseFloat(amountSent);
 
     try {
-        console.log(chalk.hex('#1E90FF')(`\n║ 🔄 Melakukan Swap ${amountSent} ETH ke WETH...`));
+        console.log(chalk.hex('#1E90FF')(`\n║ 🔄 Melakukan Swap ${amountSent} ETH ($${amountUSD}) ke WETH...`));
+
         const transactionReceipt = await web3.eth.sendTransaction(transactionObject);
-        
-        console.log(chalk.hex('#90ee90')(`║ ✅ Transaksi berhasil!`));
         const transactionLink = `https://taikoscan.io/tx/${transactionReceipt.transactionHash}`;
+
+        const gasPrice = await web3.eth.getGasPrice();
+        const totalCostInETH = (transactionReceipt.gasUsed * gasPrice) / 1e18;
+        const gasCostUSD = (totalCostInETH * ethPrice).toFixed(4);
+
+        console.log(chalk.hex('#90ee90')(`║ ✅ Transaksi berhasil!`));
         console.log(chalk.hex('#add8e6')(`║ 🔗 Rincian transaksi: ${transactionLink}`));
+        console.log(chalk.hex('#FFB6C1')(`║ 🧯 Gas yang digunakan: ${totalCostInETH.toFixed(7)} ETH ($${gasCostUSD})`));
 
         const points = await getLatestData(account.address);
         const formatPoints = points.join(', '); 
@@ -112,15 +129,18 @@ async function deposit(sendIndex, txCount) {
     }
 }
 
+
 async function withdraw(sendIndex, txCount) {
     if (sendIndex >= txCount) return;
 
+    const ethPrice = await getETHPrice();
     const wethBalance = await wethContract.methods.balanceOf(account.address).call();
     const initialWETHBalance = parseInt(wethBalance);
     const gasLimit = parseInt(process.env.GAS_LIMIT);
     const randomAmount = getRandomAmount();
     const amountToWithdraw = web3.utils.toWei(randomAmount, 'ether');
     let valueToWithdraw = parseInt(amountToWithdraw);
+    const amountSent = web3.utils.fromWei(valueToWithdraw.toString(), 'ether');
 
     if (initialWETHBalance <= valueToWithdraw) {
         valueToWithdraw = initialWETHBalance;
@@ -145,19 +165,25 @@ async function withdraw(sendIndex, txCount) {
         gasLimit: web3.utils.toHex(gasLimit)
     };
 
-    const amountSent = web3.utils.fromWei(valueToWithdraw.toString(), 'ether');
+    const amountUSD = (amountSent * ethPrice).toFixed(3);
     totalAmountWithdrew += parseFloat(amountSent);
 
     try {
         console.log(chalk.hex('#1E90FF')(`\n║ 🔄 Melakukan Swap ${amountSent} WETH ke ETH...`));
+
         const transactionReceipt = await web3.eth.sendTransaction(transactionObject);
+        const transactionLink = `https://taikoscan.io/tx/${transactionReceipt.transactionHash}`;
+
+        const gasPrice = await web3.eth.getGasPrice();
+        const totalCostInETH = (transactionReceipt.gasUsed * gasPrice) / 1e18;
+        const gasCostUSD = (totalCostInETH * ethPrice).toFixed(4);
 
         console.log(chalk.hex('#90ee90')(`║ ✅ Transaksi berhasil!`));
-        const transactionLink = `https://taikoscan.io/tx/${transactionReceipt.transactionHash}`;
         console.log(chalk.hex('#add8e6')(`║ 🔗 Rincian transaksi: ${transactionLink}`));
+        console.log(chalk.hex('#FFB6C1')(`║ 🧯 Gas yang digunakan: ${totalCostInETH.toFixed(7)} ETH ($${gasCostUSD})`));
 
         const points = await getLatestData(account.address);
-        const formatPoints = points.join(', ');
+        const formatPoints = points.join(', '); 
         const walletLink = `https://taikoscan.io/address/${account.address}`;
 
         const message = `[Address](${walletLink})\n✅ *Swap ${amountSent} WETH ke ETH berhasil!*\n🔗 [Transaksi hash](${transactionLink})\n📊 *Points Tx sebelumnya: ${formatPoints} *`;
@@ -212,16 +238,14 @@ async function dailytx() {
     try {
         const address = account.address;
 
-        await deposit(1);
+        await deposit(0, 1);
         totalDepositCount++;
-        console.log(chalk.hex('#ffb347')(`║ ⏳ Delay 5 Detik`));
-        await startCountdown(5);
+        await startCountdown(20);
         console.log();
 
-        await withdraw(1);
+        await withdraw(0, 1);
         totalWithdrawCount++;
-        console.log(chalk.hex('#ffb347')(`║ ⏳ Delay 5 Detik`));
-        await startCountdown(5);
+        await startCountdown(20);
         console.log();
 
     } catch (error) {
@@ -311,7 +335,7 @@ async function startCountdown(seconds) {
             } else {
                 process.stdout.clearLine();
                 process.stdout.cursorTo(0);
-                process.stdout.write(chalk.hex('#FF69B4')(`║ ⏱️ Waktu Yg Tersisa: ${countdown} detik\r`));
+                process.stdout.write(chalk.hex('#FF69B4')(`║ ⏱️ Menunggu Delay : ${countdown} detik\r`));
                 countdown--;
             }
         }, 1000);
